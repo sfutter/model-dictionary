@@ -1,0 +1,98 @@
+---
+title: "Random-forest"
+author: "Steven Futter"
+date: "30/12/2019"
+output: html_document
+---
+
+```{r}
+install.packages('randomForest')
+library(randomForest)
+```
+
+```{r}
+data1 = read.csv(file.choose(), header = TRUE)
+head(data1)
+```
+
+
+```{r}
+colnames(data1) = c('BuyingPrice','Maintenance','NumDoors',
+                    'NumPersons','BootSpace','Safety',
+                    'Condition')
+```
+
+
+```{r}
+str(data1)
+```
+
+```{r}
+summary(data1)
+```
+
+Split data into train/validation set
+```{r}
+set.seed(100)
+train = sample(nrow(data1), 0.7*nrow(data1), replace = FALSE)
+TrainSet = data1[train,]
+ValidSet = data1[-train,]
+summary(TrainSet)
+summary(ValidSet)
+```
+
+Create a Random Forest model with default parameters
+```{r}
+model1 <- randomForest(Condition ~ ., data = TrainSet, importance = TRUE)
+model1
+```
+
+By default number of trees is 500. Num vars tried at each split is 2. Error rate is 3.73%. 
+
+
+# Fine tuning parameters of Random Forest model
+```{r}
+model2 <- randomForest(Condition ~ ., data = TrainSet, ntree = 500, mtry = 6, importance = TRUE)
+model2
+```
+
+
+Error rate reduced to 1.82% when increase mtry from 2 to 6. 
+
+
+# Predicting on train set
+```{r}
+predTrain <- predict(model2, TrainSet, type = "class")
+# Checking classification accuracy
+table(predTrain, TrainSet$Condition) 
+```
+
+# Predicting on Validation set
+```{r}
+predValid <- predict(model2, ValidSet, type = "class")
+# Checking classification accuracy
+mean(predValid == ValidSet$Condition)                    
+table(predValid,ValidSet$Condition)
+```
+
+# To check important variables
+```{r}
+importance(model2)        
+varImpPlot(model2) 
+```
+
+# Using For loop to identify the right mtry for model
+```{r}
+a=c()
+i=5
+for (i in 3:8) {
+  model3 <- randomForest(Condition ~ ., data = TrainSet, ntree = 500, mtry = i, importance = TRUE)
+  predValid <- predict(model3, ValidSet, type = "class")
+  a[i-2] = mean(predValid == ValidSet$Condition)
+}
+ 
+a
+ 
+plot(3:8,a)
+```
+
